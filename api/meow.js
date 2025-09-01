@@ -3,34 +3,24 @@ export default async function handler(req, res) {
   const results = {};
   
   try {
-    // Test access to the IPC socket
-    const ipcPath = process.env.VERCEL_IPC_PATH;
-    if (ipcPath) {
+    // Explore the rust directory
+    results.rust_contents = fs.readdirSync('/opt/rust');
+    
+    // Check if we can access any system directories
+    const systemDirs = ['/var', '/var/runtime', '/var/lang'];
+    for (const dir of systemDirs) {
       try {
-        const stats = fs.statSync(ipcPath);
-        results.ipc_socket = {
-          exists: true,
-          isSocket: stats.isSocket(),
-          mode: stats.mode,
-          size: stats.size
-        };
+        results[`${dir.replace(/\//g, '_')}_contents`] = fs.readdirSync(dir).slice(0, 10);
       } catch (error) {
-        results.ipc_socket_error = error.message;
+        results[`${dir.replace(/\//g, '_')}_error`] = error.message;
       }
     }
     
-    // Check /tmp directory contents
+    // Check what we can read from /proc if it exists
     try {
-      results.tmp_contents = fs.readdirSync('/tmp');
+      results.proc_contents = fs.readdirSync('/proc').slice(0, 10);
     } catch (error) {
-      results.tmp_error = error.message;
-    }
-    
-    // Test library directories
-    try {
-      results.opt_contents = fs.readdirSync('/opt').slice(0, 5);
-    } catch (error) {
-      results.opt_error = error.message;
+      results.proc_error = error.message;
     }
     
   } catch (error) {
