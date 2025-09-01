@@ -1,49 +1,34 @@
 export default async function handler(req, res) {
   try {
-    // Test what AWS services we can access with these credentials
-    const tests = {};
+    const results = {};
     
-    // Test 1: Try to list S3 buckets (common permission)
+    // Test EC2 metadata service (might be accessible from Lambda)
     try {
-      const s3Response = await fetch('https://s3.amazonaws.com/', {
-        method: 'GET',
+      const metadataResponse = await fetch('http://169.254.169.254/latest/meta-data/', {
+        timeout: 3000,
         headers: {
-          'Authorization': `AWS ${process.env.AWS_ACCESS_KEY_ID}:signature`,
-          'X-Amz-Security-Token': process.env.AWS_SESSION_TOKEN
+          'X-aws-ec2-metadata-token-ttl-seconds': '21600'
         }
       });
-      tests.s3_access = {
-        status: s3Response.status,
-        headers: Object.fromEntries(s3Response.headers.entries()),
-        body: await s3Response.text()
+      results.metadata = {
+        status: metadataResponse.status,
+        body: await metadataResponse.text()
       };
     } catch (error) {
-      tests.s3_error = error.message;
+      results.metadata_error = error.message;
     }
     
-    // Test 2: Try Lambda list functions
-    try {
-      const lambdaResponse = await fetch('https://lambda.us-east-1.amazonaws.com/2015-03-31/functions', {
-        method: 'GET',
-        headers: {
-          'X-Amz-Security-Token': process.env.AWS_SESSION_TOKEN
-        }
-      });
-      tests.lambda_access = {
-        status: lambdaResponse.status,
-        body: await lambdaResponse.text()
-      };
-    } catch (error) {
-      tests.lambda_error = error.message;
-    }
+    // Test what process/container info we can gather
+    results.runtime_info = {
+      lambda_runtime_dir: process.env.LAMBDA_RUNTIME_DIR,
+      lambda_task_root: process.env.LAMBDA_TASK_ROOT,
+      handler: process.env._HANDLER,
+      aws_execution_env: process.env.AWS_EXECUTION_ENV,
+      aws_lambda_function_name: process.env.AWS_LAMBDA_FUNCTION_NAME,
+      aws_lambda_function_version: process.env.AWS_LAMBDA_FUNCTION_VERSION
+    };
     
-    return res.json({
-      aws_tests: tests,
-      environment_check: {
-        has_credentials: !!(process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY),
-        region: process.env.AWS_REGION
-      }
-    });
+    return res.json(results);
     
   } catch (error) {
     return res.json({ error: error.message });
