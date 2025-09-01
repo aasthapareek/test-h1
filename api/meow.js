@@ -1,26 +1,30 @@
 export default async function handler(req, res) {
   const results = {};
   
-  // Test crypto capabilities
-  if (typeof crypto !== 'undefined') {
-    results.crypto_available = true;
-    results.crypto_methods = Object.getOwnPropertyNames(crypto);
+  // Test performance object
+  if (typeof performance !== 'undefined') {
+    results.performance_available = true;
+    results.performance_now = performance.now();
+    results.performance_methods = Object.getOwnPropertyNames(performance);
     
-    // Test random generation
-    try {
-      const randomBytes = crypto.getRandomValues(new Uint8Array(8));
-      results.random_test = Array.from(randomBytes);
-    } catch (error) {
-      results.random_error = error.message;
-    }
+    // Test timing
+    const start = performance.now();
+    // Small delay
+    for (let i = 0; i < 100000; i++) {}
+    const end = performance.now();
+    results.timing_test = end - start;
   }
   
-  // Test navigator object
-  if (typeof navigator !== 'undefined') {
-    results.navigator_info = {
-      userAgent: navigator.userAgent || 'not available',
-      platform: navigator.platform || 'not available',
-      languages: navigator.languages || 'not available'
+  // Test garbage collection if available
+  if (typeof gc !== 'undefined') {
+    results.gc_available = true;
+    const memBefore = process.memoryUsage();
+    gc();
+    const memAfter = process.memoryUsage();
+    results.gc_effect = {
+      heap_before: memBefore.heapUsed,
+      heap_after: memAfter.heapUsed,
+      difference: memBefore.heapUsed - memAfter.heapUsed
     };
   }
   
