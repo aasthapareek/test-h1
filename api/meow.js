@@ -3,24 +3,27 @@ export default async function handler(req, res) {
   const results = {};
   
   try {
-    // Explore the rust directory
-    results.rust_contents = fs.readdirSync('/opt/rust');
+    // Read key Lambda runtime files
+    const runtimeFiles = [
+      '/var/runtime/UserFunction.js',
+      '/var/runtime/index.mjs', 
+      '/var/runtime/THIRD-PARTY-LICENSES.txt'
+    ];
     
-    // Check if we can access any system directories
-    const systemDirs = ['/var', '/var/runtime', '/var/lang'];
-    for (const dir of systemDirs) {
+    for (const file of runtimeFiles) {
       try {
-        results[`${dir.replace(/\//g, '_')}_contents`] = fs.readdirSync(dir).slice(0, 10);
+        const content = fs.readFileSync(file, 'utf8');
+        results[file.replace(/\//g, '_')] = content.slice(0, 2000); // Limit output
       } catch (error) {
-        results[`${dir.replace(/\//g, '_')}_error`] = error.message;
+        results[file.replace(/\//g, '_') + '_error'] = error.message;
       }
     }
     
-    // Check what we can read from /proc if it exists
+    // Check process information
     try {
-      results.proc_contents = fs.readdirSync('/proc').slice(0, 10);
+      results.proc_self_status = fs.readFileSync('/proc/self/status', 'utf8');
     } catch (error) {
-      results.proc_error = error.message;
+      results.proc_status_error = error.message;
     }
     
   } catch (error) {
