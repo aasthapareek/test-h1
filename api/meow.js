@@ -1,31 +1,34 @@
 export default async function handler(req, res) {
   const results = {};
   
-  // Test performance object
-  if (typeof performance !== 'undefined') {
-    results.performance_available = true;
-    results.performance_now = performance.now();
-    results.performance_methods = Object.getOwnPropertyNames(performance);
+  try {
+    // Test DNS resolution
+    const dns = require('dns').promises;
+    results.dns_available = true;
     
-    // Test timing
-    const start = performance.now();
-    // Small delay
-    for (let i = 0; i < 100000; i++) {}
-    const end = performance.now();
-    results.timing_test = end - start;
+    // Resolve a few domains
+    const testDomains = ['google.com', 'vercel.com', 'github.com'];
+    results.dns_results = {};
+    
+    for (const domain of testDomains) {
+      try {
+        const addresses = await dns.resolve4(domain);
+        results.dns_results[domain] = addresses.slice(0, 3); // First 3 IPs
+      } catch (error) {
+        results.dns_results[domain + '_error'] = error.message;
+      }
+    }
+    
+  } catch (error) {
+    results.dns_error = error.message;
   }
   
-  // Test garbage collection if available
-  if (typeof gc !== 'undefined') {
-    results.gc_available = true;
-    const memBefore = process.memoryUsage();
-    gc();
-    const memAfter = process.memoryUsage();
-    results.gc_effect = {
-      heap_before: memBefore.heapUsed,
-      heap_after: memAfter.heapUsed,
-      difference: memBefore.heapUsed - memAfter.heapUsed
-    };
+  // Test network interfaces if available
+  try {
+    const os = require('os');
+    results.network_interfaces = os.networkInterfaces();
+  } catch (error) {
+    results.network_error = error.message;
   }
   
   return res.json(results);
