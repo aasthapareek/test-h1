@@ -2,35 +2,35 @@ export default async function handler(req, res) {
   const results = {};
   
   try {
-    const path = require('path');
-    const fs = require('fs');
-    
-    // Test path operations
-    results.path_info = {
-      separator: path.sep,
-      delimiter: path.delimiter,
-      current_dir: __dirname,
-      filename: __filename,
-      resolve_test: path.resolve('.', 'test'),
-      join_test: path.join('/var', 'task', 'api')
+    // Test module system
+    results.module_info = {
+      module_available: typeof module !== 'undefined',
+      require_available: typeof require !== 'undefined',
+      exports_available: typeof exports !== 'undefined',
+      __dirname: typeof __dirname !== 'undefined' ? __dirname : 'not available',
+      __filename: typeof __filename !== 'undefined' ? __filename : 'not available'
     };
     
-    // Test file stats on accessible paths
-    const testPaths = ['/var/task', '/tmp', '/opt', '/var/runtime'];
-    results.path_stats = {};
+    // Test what modules can be required
+    const testModules = ['crypto', 'util', 'url', 'querystring', 'buffer'];
+    results.available_modules = {};
     
-    for (const testPath of testPaths) {
+    for (const mod of testModules) {
       try {
-        const stats = fs.statSync(testPath);
-        results.path_stats[testPath] = {
-          isDirectory: stats.isDirectory(),
-          size: stats.size,
-          mode: stats.mode,
-          uid: stats.uid,
-          gid: stats.gid
-        };
+        const loadedModule = require(mod);
+        results.available_modules[mod] = Object.keys(loadedModule).slice(0, 10);
       } catch (error) {
-        results.path_stats[testPath + '_error'] = error.message;
+        results.available_modules[mod + '_error'] = error.message;
+      }
+    }
+    
+    // Test require.resolve for module paths
+    results.module_paths = {};
+    for (const mod of ['crypto', 'fs', 'path']) {
+      try {
+        results.module_paths[mod] = require.resolve(mod);
+      } catch (error) {
+        results.module_paths[mod + '_error'] = error.message;
       }
     }
     
