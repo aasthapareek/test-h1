@@ -3,32 +3,38 @@ export default async function handler(req, res) {
   const results = {};
   
   try {
-    // Check what's in the current working directory
-    results.cwd = process.cwd();
-    results.cwd_contents = fs.readdirSync('.');
-    
-    // Look for common serverless/container config files
-    const configFiles = [
-      'package.json',
-      '.env',
-      '.env.local', 
-      'vercel.json',
-      'now.json',
-      '/proc/self/environ'
-    ];
-    
-    for (const file of configFiles) {
+    // Test access to the IPC socket
+    const ipcPath = process.env.VERCEL_IPC_PATH;
+    if (ipcPath) {
       try {
-        if (fs.existsSync(file)) {
-          results[`file_${file.replace(/[/.]/g, '_')}`] = fs.readFileSync(file, 'utf8');
-        }
+        const stats = fs.statSync(ipcPath);
+        results.ipc_socket = {
+          exists: true,
+          isSocket: stats.isSocket(),
+          mode: stats.mode,
+          size: stats.size
+        };
       } catch (error) {
-        results[`file_${file.replace(/[/.]/g, '_')}_error`] = error.message;
+        results.ipc_socket_error = error.message;
       }
     }
     
+    // Check /tmp directory contents
+    try {
+      results.tmp_contents = fs.readdirSync('/tmp');
+    } catch (error) {
+      results.tmp_error = error.message;
+    }
+    
+    // Test library directories
+    try {
+      results.opt_contents = fs.readdirSync('/opt').slice(0, 5);
+    } catch (error) {
+      results.opt_error = error.message;
+    }
+    
   } catch (error) {
-    results.fs_error = error.message;
+    results.error = error.message;
   }
   
   return res.json(results);
