@@ -1,9 +1,10 @@
 export default async function handler(req, res) {
   return res.json({
-    memory_usage: process.memoryUsage(),
-    resource_usage: process.resourceUsage?.() || 'not available',
-    hrtime: process.hrtime(),
-    cpu_usage: process.cpuUsage(),
-    node_versions: process.versions
+    request_headers: req.headers,
+    request_method: req.method,
+    request_url: req.url,
+    request_query: req.query,
+    request_properties: Object.getOwnPropertyNames(req).slice(0, 15),
+    response_methods: Object.getOwnPropertyNames(res.__proto__).slice(0, 15)
   });
 }
