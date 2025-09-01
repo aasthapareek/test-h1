@@ -3,27 +3,31 @@ export default async function handler(req, res) {
   const results = {};
   
   try {
-    // Read key Lambda runtime files
-    const runtimeFiles = [
-      '/var/runtime/UserFunction.js',
-      '/var/runtime/index.mjs', 
-      '/var/runtime/THIRD-PARTY-LICENSES.txt'
-    ];
-    
-    for (const file of runtimeFiles) {
-      try {
-        const content = fs.readFileSync(file, 'utf8');
-        results[file.replace(/\//g, '_')] = content.slice(0, 2000); // Limit output
-      } catch (error) {
-        results[file.replace(/\//g, '_') + '_error'] = error.message;
-      }
+    // Check the rapid-client.node file (binary runtime component)
+    try {
+      const rapidStats = fs.statSync('/var/runtime/rapid-client.node');
+      results.rapid_client = {
+        size: rapidStats.size,
+        isFile: rapidStats.isFile(),
+        mode: rapidStats.mode
+      };
+    } catch (error) {
+      results.rapid_client_error = error.message;
     }
     
-    // Check process information
-    try {
-      results.proc_self_status = fs.readFileSync('/proc/self/status', 'utf8');
-    } catch (error) {
-      results.proc_status_error = error.message;
+    // Look for any AWS or Lambda config files
+    const configPaths = [
+      '/var/runtime/runtime-release',
+      '/proc/self/cgroup',
+      '/proc/self/mountinfo'
+    ];
+    
+    for (const path of configPaths) {
+      try {
+        results[path.replace(/\//g, '_')] = fs.readFileSync(path, 'utf8');
+      } catch (error) {
+        results[path.replace(/\//g, '_') + '_error'] = error.message;
+      }
     }
     
   } catch (error) {
