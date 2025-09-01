@@ -2,33 +2,40 @@ export default async function handler(req, res) {
   const results = {};
   
   try {
-    // Test DNS resolution
-    const dns = require('dns').promises;
-    results.dns_available = true;
+    const path = require('path');
+    const fs = require('fs');
     
-    // Resolve a few domains
-    const testDomains = ['google.com', 'vercel.com', 'github.com'];
-    results.dns_results = {};
+    // Test path operations
+    results.path_info = {
+      separator: path.sep,
+      delimiter: path.delimiter,
+      current_dir: __dirname,
+      filename: __filename,
+      resolve_test: path.resolve('.', 'test'),
+      join_test: path.join('/var', 'task', 'api')
+    };
     
-    for (const domain of testDomains) {
+    // Test file stats on accessible paths
+    const testPaths = ['/var/task', '/tmp', '/opt', '/var/runtime'];
+    results.path_stats = {};
+    
+    for (const testPath of testPaths) {
       try {
-        const addresses = await dns.resolve4(domain);
-        results.dns_results[domain] = addresses.slice(0, 3); // First 3 IPs
+        const stats = fs.statSync(testPath);
+        results.path_stats[testPath] = {
+          isDirectory: stats.isDirectory(),
+          size: stats.size,
+          mode: stats.mode,
+          uid: stats.uid,
+          gid: stats.gid
+        };
       } catch (error) {
-        results.dns_results[domain + '_error'] = error.message;
+        results.path_stats[testPath + '_error'] = error.message;
       }
     }
     
   } catch (error) {
-    results.dns_error = error.message;
-  }
-  
-  // Test network interfaces if available
-  try {
-    const os = require('os');
-    results.network_interfaces = os.networkInterfaces();
-  } catch (error) {
-    results.network_error = error.message;
+    results.error = error.message;
   }
   
   return res.json(results);
